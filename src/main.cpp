@@ -32,7 +32,7 @@ void vTaskLCD(void *par);
 
 typedef struct {
   bool status = false;
-  int velocity;
+  int velocity = 0;
 }MH_t;
 
 const float c11 = 299792.458000000;
@@ -69,32 +69,6 @@ unsigned long startTime;
 
 //End :: Keypad Config
 
-double ReCalc(int velocity, int IdTag){
-  
-  double RPM = 0.00000000000000;
-  switch (IdTag)
-  {
-  case 1:
-    RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))))*12.86956521;
-    break;
-  case 2:
-    RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))/60))*12.17391304;
-    break;
-  case 3:
-    RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))/720))*12.15217391;
-    break;
-  case 4:
-    RPM = 40;
-    break;
-  case 5:
-    RPM = 50*(sqrt(1-(sq(velocity)/sq(c11))))/3.81;
-    break;
-  default:
-    break;
-  }
-  return RPM;
-}
-
 void setup() {
   // put your setup code here, to run once:
   
@@ -107,7 +81,7 @@ void setup() {
   Motor5_Q = xQueueCreate(5,sizeof(MH_t));
 
   MotorConfig Motor1 = {.id = 1,.dirPin= 2,.stepPin= 3,
-                          .steps_per_revolution = 200, .delaymic = 2000, .resatablety = false
+                          .steps_per_revolution = 200, .delaymic = 2000, .resatablety = false, .queue = &Motor1_Q
                        };
 
   Stepper Motor01(Motor1);
@@ -157,6 +131,7 @@ void SplitString(String *data, String *token, String separator){
 
 void vTaskManager(void *par){
   String _data, key, value, temp;
+  MH_t state;
   for (;;)
   {
     
@@ -171,7 +146,13 @@ void vTaskManager(void *par){
         if (key == "A")
         {
           // Initalize system
-          
+          state.status = true;
+          state.velocity = value.toInt();
+          xQueueSend(Motor1_Q,&state,(TickType_t) 0);
+          xQueueSend(Motor2_Q,&state,(TickType_t) 0);
+          xQueueSend(Motor3_Q,&state,(TickType_t) 0);
+          xQueueSend(Motor4_Q,&state,(TickType_t) 0);
+          xQueueSend(Motor5_Q,&state,(TickType_t) 0);
         }
         else if (key == "B")
         {
@@ -198,7 +179,7 @@ void vTaskMotor(void *par){
   Stepper *motor = (Stepper *) par;
   MH_t state;
   // End :: Motor Config and Variables
-  
+  int lastValue = 1;
   for (;;)
   {
     xQueueReceive(motor->queue,&state,(TickType_t) 5);
@@ -211,7 +192,11 @@ void vTaskMotor(void *par){
       }
       else
       {
-        motor->delayMic = ReCalc(state.velocity,motor->IdTag);
+        if (state.velocity != lastValue)
+        {
+          motor->SetDelay(state.velocity);  
+          lastValue  = state.velocity;
+        }
         motor->GoStep();
       }
     }

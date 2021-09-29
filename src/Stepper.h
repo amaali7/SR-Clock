@@ -89,6 +89,34 @@ public:
             targetSteps = 0;
         }
     }
+
+
+    double SetDelay(int velocity){
+    
+    double RPM = 0.00000000000000;
+    switch (this->IdTag )
+    {
+    case 1:
+        RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))))*12.86956521;
+        break;
+    case 2:
+        RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))/60))*12.17391304;
+        break;
+    case 3:
+        RPM = abs(1-(sqrt(1-(sq(velocity)/sq(c11)))/720))*12.15217391;
+        break;
+    case 4:
+        RPM = 40;
+        break;
+    case 5:
+        RPM = 50*(sqrt(1-(sq(velocity)/sq(c11))))/3.81;
+        break;
+    default:
+        break;
+    }
+    return RPM/0.01875;
+    }
+
 };
 
 
