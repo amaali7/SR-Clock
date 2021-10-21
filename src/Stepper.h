@@ -1,6 +1,7 @@
 #ifndef Stepper_H
 #define Stepper_H
 #include <Arduino.h>
+#include <math.h>
 
 typedef struct{
   int id;
@@ -26,6 +27,8 @@ public:
     double delayMic;
     int IdTag;
     bool resatable;
+    float c11 = 299792.458000000;
+
     QueueHandle_t *queue;
     Stepper(MotorConfig motor ){
         IdTag = motor.id;
@@ -115,6 +118,14 @@ public:
         break;
     }
     return RPM/0.01875;
+    }
+
+    void RestMotor(int v){
+        if(resatable && v == 0){
+            Init(currentStep, 1);
+            GoTarget();            
+        }
+        Init(0,0);
     }
 
 };
